@@ -1,7 +1,7 @@
 "use client";
 import { Flame, Clock, Star, Tag, ChevronDown } from "lucide-react";
-import { Prompt } from "@/types";
-import { PromptState } from "@/app/page";
+import { useRouter } from "next/navigation";
+import { Prompt, PromptState } from "@/types";
 import PromptCard from "./PromptCard";
 import { clsx } from "clsx";
 
@@ -40,6 +40,7 @@ export default function PromptFeed({
   title = "Explore Prompts",
   subtitle = "Discover and run the best prompts, shared by the community.",
 }: PromptFeedProps) {
+  const router = useRouter();
   return (
     <div className="flex flex-col h-full">
       {/* Feed header */}
@@ -85,7 +86,10 @@ export default function PromptFeed({
           ))}
         </div>
 
-        <button className="flex items-center gap-1.5 px-3 py-2 lg:py-1.5 rounded-lg bg-bg-elevated border border-border-subtle text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-default transition-all flex-shrink-0 whitespace-nowrap">
+        <button
+          onClick={() => router.push("/search")}
+          className="flex items-center gap-1.5 px-3 py-2 lg:py-1.5 rounded-lg bg-bg-elevated border border-border-subtle text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-default transition-all flex-shrink-0 whitespace-nowrap"
+        >
           <Tag size={12} />
           All Tags
           <ChevronDown size={12} />

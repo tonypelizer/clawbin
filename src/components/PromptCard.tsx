@@ -7,8 +7,7 @@ import {
   Bookmark,
   BookmarkCheck,
 } from "lucide-react";
-import { Prompt } from "@/types";
-import { PromptState } from "@/app/page";
+import { Prompt, PromptState } from "@/types";
 import Avatar from "./Avatar";
 import TagBadge from "./TagBadge";
 import ModelBadge from "./ModelBadge";

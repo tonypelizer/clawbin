@@ -65,3 +65,12 @@ export interface Prompt {
   isBookmarked?: boolean;
   runs: PromptRun[];
 }
+
+// Per-prompt mutable UI state (upvote, bookmark, etc.)
+export interface PromptState {
+  upvotes: number;
+  upvoted: boolean;
+  bookmarked: boolean;
+  runs: PromptRun[];
+  runsCount: number;
+}

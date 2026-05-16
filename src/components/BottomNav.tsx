@@ -2,13 +2,14 @@
 import { Compass, Plus, Bookmark, User, Search } from "lucide-react";
 import { clsx } from "clsx";
 
-type NavSection = "explore" | "my-prompts" | "bookmarks" | "my-runs";
+type BottomNavSection = "explore" | "bookmarks" | "my-runs" | "my-prompts";
 
 interface BottomNavProps {
-  activeNav: NavSection;
-  onNavChange: (nav: NavSection) => void;
+  activeNav: string;
+  onNavChange: (nav: BottomNavSection) => void;
   onSearch: () => void;
   onCreate: () => void;
+  onProfile: () => void;
 }
 
 export default function BottomNav({
@@ -16,6 +17,7 @@ export default function BottomNav({
   onNavChange,
   onSearch,
   onCreate,
+  onProfile,
 }: BottomNavProps) {
   return (
     <nav
@@ -40,7 +42,10 @@ export default function BottomNav({
         <button
           onClick={onSearch}
           aria-label="Search"
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 h-full text-text-muted transition-colors active:bg-bg-hover"
+          className={clsx(
+            "flex-1 flex flex-col items-center justify-center gap-0.5 h-full transition-colors active:bg-bg-hover",
+            activeNav === "search" ? "text-accent-light" : "text-text-muted",
+          )}
         >
           <Search size={22} />
           <span className="text-[10px] font-medium leading-none">Search</span>
@@ -72,7 +77,7 @@ export default function BottomNav({
 
         {/* Profile */}
         <button
-          onClick={() => onNavChange("my-runs")}
+          onClick={onProfile}
           aria-label="Profile"
           className={clsx(
             "flex-1 flex flex-col items-center justify-center gap-0.5 h-full transition-colors active:bg-bg-hover",

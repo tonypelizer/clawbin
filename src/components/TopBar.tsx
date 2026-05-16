@@ -1,19 +1,29 @@
 "use client";
-import { Search, Bell, Plus, Command } from "lucide-react";
+import { useState } from "react";
+import { Search, Bell, Plus, Sun, Moon } from "lucide-react";
 import Avatar from "./Avatar";
 import { CURRENT_USER } from "@/data/mock";
+import { useTheme } from "@/context/ThemeContext";
 
 interface TopBarProps {
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
-  inputRef?: React.RefObject<HTMLInputElement | null>;
+  onSearch?: (q: string) => void;
+  onNewPrompt?: () => void;
+  onProfile?: () => void;
 }
 
 export default function TopBar({
-  searchQuery,
-  onSearchChange,
-  inputRef,
+  onSearch,
+  onNewPrompt,
+  onProfile,
 }: TopBarProps) {
+  const [query, setQuery] = useState("");
+  const { theme, toggleTheme } = useTheme();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (query.trim() && onSearch) onSearch(query.trim());
+  }
+
   return (
     <header className="h-14 flex-shrink-0 flex items-center gap-3 px-4 border-b border-border-subtle bg-bg-surface/80 backdrop-blur-sm sticky top-0 z-20">
       {/* Clawbin logo — mobile only (sidebar hidden on mobile) */}
@@ -29,42 +39,67 @@ export default function TopBar({
         </div>
       </div>
 
-      {/* Search input */}
-      <div className="flex-1 relative group">
+      {/* Search form */}
+      <form onSubmit={handleSubmit} className="flex-1 relative group">
         <Search
           size={14}
           className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-text-secondary transition-colors pointer-events-none"
         />
         <input
-          ref={inputRef}
           type="text"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
           placeholder="Search prompts, tags, or use cases..."
           className="w-full h-10 lg:h-9 pl-8 pr-3 lg:pr-16 rounded-lg bg-bg-elevated border border-border-subtle text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50 focus:bg-bg-hover transition-all"
         />
         <div className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-0.5 pointer-events-none">
-          <kbd className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-bg-hover border border-border-default text-[10px] text-text-muted font-mono">
-            <Command size={9} />K
+          <kbd className="flex items-center justify-center px-1 py-0.5 rounded bg-bg-hover border border-border-default text-[10px] text-text-muted font-mono">
+            ↵
           </kbd>
         </div>
-      </div>
+      </form>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        {/* New Prompt button: icon only on mobile, text+icon on desktop */}
-        <button className="flex items-center justify-center gap-1.5 h-10 lg:h-9 w-10 lg:w-auto lg:px-4 rounded-lg bg-accent hover:bg-accent-hover active:scale-95 transition-all text-sm font-semibold text-white shadow-[0_0_16px_rgba(124,58,237,0.3)] hover:shadow-[0_0_20px_rgba(124,58,237,0.45)]">
+        {/* New Prompt button */}
+        <button
+          onClick={onNewPrompt}
+          className="flex items-center justify-center gap-1.5 h-10 lg:h-9 w-10 lg:w-auto lg:px-4 rounded-lg bg-accent hover:bg-accent-hover active:scale-95 transition-all text-sm font-semibold text-white shadow-[0_0_16px_rgba(124,58,237,0.3)] hover:shadow-[0_0_20px_rgba(124,58,237,0.45)]"
+          aria-label="New prompt"
+        >
           <Plus size={18} strokeWidth={2.5} />
           <span className="hidden lg:inline">New Prompt</span>
         </button>
 
         {/* Notifications — desktop only */}
-        <button className="hidden lg:flex relative w-9 h-9 rounded-lg items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-hover border border-border-subtle transition-all">
+        <button
+          aria-label="Notifications"
+          className="hidden lg:flex relative w-9 h-9 rounded-lg items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-hover border border-border-subtle transition-all"
+        >
           <Bell size={15} />
           <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-accent" />
         </button>
 
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          aria-label={
+            theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+          }
+          className="flex w-9 h-9 rounded-lg items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-hover border border-border-subtle transition-all"
+        >
+          {theme === "dark" ? (
+            <Sun size={15} className="transition-transform duration-200" />
+          ) : (
+            <Moon size={15} className="transition-transform duration-200" />
+          )}
+        </button>
+
         {/* Avatar — desktop only */}
-        <button className="hidden lg:flex rounded-full hover:ring-2 hover:ring-accent/40 transition-all">
+        <button
+          onClick={onProfile}
+          aria-label="Your profile"
+          className="hidden lg:flex rounded-full hover:ring-2 hover:ring-accent/40 transition-all"
+        >
           <Avatar author={CURRENT_USER} size="md" />
         </button>
       </div>

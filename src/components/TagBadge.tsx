@@ -1,7 +1,8 @@
 "use client";
 import { Tag } from "@/types";
+import { useTheme } from "@/context/ThemeContext";
 
-const TAG_COLORS: Record<string, string> = {
+const TAG_COLORS_DARK: Record<string, string> = {
   Marketing: "bg-pink-950/60 text-pink-300 border border-pink-900/50",
   Email: "bg-violet-950/60 text-violet-300 border border-violet-900/50",
   Copywriting: "bg-purple-950/60 text-purple-300 border border-purple-900/50",
@@ -25,7 +26,31 @@ const TAG_COLORS: Record<string, string> = {
   AI: "bg-violet-950/60 text-violet-300 border border-violet-900/50",
 };
 
-const DEFAULT_COLOR = "bg-zinc-800/70 text-zinc-300 border border-zinc-700/50";
+const TAG_COLORS_LIGHT: Record<string, string> = {
+  Marketing: "bg-pink-50 text-pink-700 border border-pink-200",
+  Email: "bg-violet-50 text-violet-700 border border-violet-200",
+  Copywriting: "bg-purple-50 text-purple-700 border border-purple-200",
+  Education: "bg-blue-50 text-blue-700 border border-blue-200",
+  Explainer: "bg-sky-50 text-sky-700 border border-sky-200",
+  Learning: "bg-cyan-50 text-cyan-700 border border-cyan-200",
+  Coding: "bg-green-50 text-green-700 border border-green-200",
+  SQL: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  Database: "bg-teal-50 text-teal-700 border border-teal-200",
+  LinkedIn: "bg-indigo-50 text-indigo-700 border border-indigo-200",
+  "Social Media": "bg-blue-50 text-blue-700 border border-blue-200",
+  Research: "bg-amber-50 text-amber-700 border border-amber-200",
+  Productivity: "bg-orange-50 text-orange-700 border border-orange-200",
+  "Data Analysis": "bg-yellow-50 text-yellow-700 border border-yellow-200",
+  Writing: "bg-rose-50 text-rose-700 border border-rose-200",
+  SEO: "bg-lime-50 text-lime-700 border border-lime-200",
+  Sales: "bg-red-50 text-red-700 border border-red-200",
+  Design: "bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200",
+  Engineering: "bg-slate-100 text-slate-700 border border-slate-300",
+  AI: "bg-violet-50 text-violet-700 border border-violet-200",
+};
+
+const DEFAULT_DARK = "bg-zinc-800/70 text-zinc-300 border border-zinc-700/50";
+const DEFAULT_LIGHT = "bg-zinc-100 text-zinc-700 border border-zinc-300";
 
 interface TagBadgeProps {
   tag: Tag;
@@ -33,7 +58,10 @@ interface TagBadgeProps {
 }
 
 export default function TagBadge({ tag, size = "sm" }: TagBadgeProps) {
-  const color = TAG_COLORS[tag] ?? DEFAULT_COLOR;
+  const { theme } = useTheme();
+  const map = theme === "light" ? TAG_COLORS_LIGHT : TAG_COLORS_DARK;
+  const defaultColor = theme === "light" ? DEFAULT_LIGHT : DEFAULT_DARK;
+  const color = map[tag] ?? defaultColor;
   return (
     <span
       className={`inline-flex items-center rounded-md font-medium ${

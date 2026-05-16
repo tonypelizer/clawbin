@@ -15,8 +15,8 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useState } from "react";
-import { Prompt } from "@/types";
-import { PromptState } from "@/app/page";
+import Link from "next/link";
+import { Prompt, PromptState } from "@/types";
 import Avatar from "./Avatar";
 import TagBadge from "./TagBadge";
 import RunCard from "./RunCard";
@@ -101,10 +101,7 @@ function HighlightedBody({ body }: { body: string }) {
     <pre className="text-xs text-text-primary font-mono whitespace-pre-wrap leading-relaxed">
       {body.split(/(\{\{[^}]+\}\})/g).map((part, i) =>
         part.startsWith("{{") ? (
-          <span
-            key={i}
-            className="text-violet-300 font-semibold bg-violet-900/30 rounded px-0.5"
-          >
+          <span key={i} className="prompt-var font-semibold">
             {part}
           </span>
         ) : (
@@ -201,14 +198,21 @@ export default function PromptDetail({
 
           {/* Author row */}
           <div className="flex items-center gap-2 mb-4 lg:mb-5">
-            <Avatar author={prompt.author} size="sm" />
-            <span className="text-sm text-text-secondary">
-              By{" "}
-              <span className="font-medium text-text-primary">
-                {prompt.author.name}
+            <Link
+              href={`/profile/${prompt.author.username}`}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
+              <Avatar author={prompt.author} size="sm" />
+              <span className="text-sm text-text-secondary">
+                By{" "}
+                <span className="font-medium text-text-primary">
+                  {prompt.author.name}
+                </span>
               </span>
+            </Link>
+            <span className="text-text-muted text-xs">
+              · {prompt.createdAt}
             </span>
-            <span className="text-text-muted text-xs">\u00b7 {prompt.createdAt}</span>
             <span className="ml-1 flex items-center gap-1 text-[11px] text-text-muted bg-bg-elevated border border-border-subtle rounded-full px-2 py-0.5">
               <Globe size={10} />
               Public

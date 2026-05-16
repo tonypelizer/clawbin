@@ -1,5 +1,6 @@
 "use client";
 import { Compass, FileText, Play, Bookmark, Settings } from "lucide-react";
+import Link from "next/link";
 import Avatar from "./Avatar";
 import { CURRENT_USER, TOP_TAGS } from "@/data/mock";
 import { clsx } from "clsx";
@@ -46,7 +47,7 @@ function NavItem({ icon, label, active, count, onClick }: NavItemProps) {
 interface SidebarProps {
   activeNav: string;
   onNavChange: (nav: string) => void;
-  activeTag: string | null;
+  activeTag?: string | null;
   onTagChange: (tag: string | null) => void;
   className?: string;
 }
@@ -54,7 +55,7 @@ interface SidebarProps {
 export default function Sidebar({
   activeNav,
   onNavChange,
-  activeTag,
+  activeTag = null,
   onTagChange,
   className,
 }: SidebarProps) {
@@ -161,7 +162,10 @@ export default function Sidebar({
         </div>
 
         {/* User row */}
-        <button className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-bg-hover transition-colors group">
+        <Link
+          href={`/profile/${CURRENT_USER.username}`}
+          className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-bg-hover transition-colors group"
+        >
           <Avatar author={CURRENT_USER} size="sm" />
           <div className="flex-1 min-w-0 text-left">
             <p className="text-xs font-medium text-text-primary truncate leading-tight">
@@ -175,7 +179,7 @@ export default function Sidebar({
             size={13}
             className="text-text-muted group-hover:text-text-secondary transition-colors flex-shrink-0"
           />
-        </button>
+        </Link>
       </div>
     </aside>
   );
