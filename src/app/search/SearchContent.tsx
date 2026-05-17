@@ -1,12 +1,11 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, X, Tag, ChevronDown, Flame, Clock, Star } from "lucide-react";
-import { PROMPTS, TOP_TAGS } from "@/data/mock";
-import { Prompt } from "@/types";
-import { usePromptStore } from "@/context/PromptStore";
 import PromptCard from "@/components/PromptCard";
 import { clsx } from "clsx";
+import { usePrompts } from "@/hooks/usePrompts";
+import { useTagStats } from "@/hooks/useTagStats";
 
 type SortOption = "trending" | "latest" | "top-rated";
 
@@ -20,7 +19,7 @@ const SORT_OPTIONS: { id: SortOption; label: string; icon: React.ReactNode }[] =
 export default function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { promptStates, handleUpvote, handleBookmark } = usePromptStore();
+  const tags = useTagStats();
 
   const initialQuery = searchParams.get("q") ?? "";
   const initialTag = searchParams.get("tag") ?? "";
@@ -29,6 +28,19 @@ export default function SearchContent() {
   const [selectedTag, setSelectedTag] = useState<string>(initialTag);
   const [sortBy, setSortBy] = useState<SortOption>("trending");
   const [showAllTags, setShowAllTags] = useState(false);
+  const {
+    prompts: results,
+    promptStates,
+    loading,
+    hasMore,
+    loadMore,
+    setPromptVote,
+    togglePromptBookmark,
+  } = usePrompts({
+    query,
+    tag: selectedTag || undefined,
+    sortBy,
+  });
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -53,40 +65,7 @@ export default function SearchContent() {
     router.replace("/search", { scroll: false });
   }
 
-  const results = useMemo(() => {
-    let list: Prompt[] = [...PROMPTS];
-
-    const q = query.trim().toLowerCase();
-    if (q) {
-      list = list.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q) ||
-          p.tags.some((t) => t.toLowerCase().includes(q)) ||
-          p.author.name.toLowerCase().includes(q) ||
-          p.body.toLowerCase().includes(q),
-      );
-    }
-
-    if (selectedTag) {
-      list = list.filter((p) => p.tags.includes(selectedTag));
-    }
-
-    if (sortBy === "trending") {
-      list.sort(
-        (a, b) =>
-          (b.isTrending ? 1 : 0) - (a.isTrending ? 1 : 0) ||
-          (promptStates[b.id]?.upvotes ?? b.upvotes) -
-            (promptStates[a.id]?.upvotes ?? a.upvotes),
-      );
-    } else if (sortBy === "top-rated") {
-      list.sort((a, b) => b.rating - a.rating);
-    }
-
-    return list;
-  }, [query, selectedTag, sortBy, promptStates]);
-
-  const visibleTags = showAllTags ? TOP_TAGS : TOP_TAGS.slice(0, 6);
+  const visibleTags = showAllTags ? tags : tags.slice(0, 6);
   const hasFilters = query.trim() || selectedTag;
 
   return (
@@ -177,7 +156,7 @@ export default function SearchContent() {
                     {" "}
                     for{" "}
                     <span className="font-medium text-text-primary">
-                      "{query}"
+                      &quot;{query}&quot;
                     </span>
                   </span>
                 )}
@@ -246,11 +225,19 @@ export default function SearchContent() {
                   state={promptStates[prompt.id]}
                   isSelected={false}
                   onSelect={() => router.push(`/prompt/${prompt.id}`)}
-                  onUpvote={() => handleUpvote(prompt.id)}
-                  onDownvote={() => {}}
-                  onBookmark={() => handleBookmark(prompt.id)}
+                  onUpvote={() => void setPromptVote(prompt.id, 1)}
+                  onDownvote={() => void setPromptVote(prompt.id, -1)}
+                  onBookmark={() => void togglePromptBookmark(prompt.id)}
                 />
               ))}
+              {hasMore && (
+                <button
+                  onClick={loadMore}
+                  className="rounded-xl border border-border-default bg-bg-elevated px-4 py-2 text-sm font-medium text-text-secondary transition-all hover:text-text-primary hover:bg-bg-hover"
+                >
+                  {loading ? "Loading…" : "Load more"}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -263,7 +250,7 @@ export default function SearchContent() {
             Browse by Tag
           </p>
           <div className="flex flex-col gap-0.5">
-            {TOP_TAGS.map((t) => (
+            {tags.map((t) => (
               <button
                 key={t.label}
                 onClick={() => toggleTag(t.label)}

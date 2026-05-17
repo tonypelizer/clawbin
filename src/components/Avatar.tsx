@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { Author } from "@/types";
 
 interface AvatarProps {
@@ -14,6 +15,18 @@ const sizes = {
 };
 
 export default function Avatar({ author, size = "md" }: AvatarProps) {
+  if (author.avatarUrl) {
+    return (
+      <Image
+        src={author.avatarUrl}
+        alt={author.name}
+        className={`${sizes[size]} rounded-full object-cover flex-shrink-0`}
+        width={40}
+        height={40}
+      />
+    );
+  }
+
   return (
     <div
       className={`${sizes[size]} rounded-full flex items-center justify-center font-semibold text-white flex-shrink-0`}

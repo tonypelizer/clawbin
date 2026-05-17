@@ -3,13 +3,13 @@ import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
-import { CURRENT_USER } from "@/data/mock";
+import { useAuth } from "@/hooks/useAuth";
 
 const NAV_ROUTES: Record<string, string> = {
   explore: "/",
   bookmarks: "/bookmarks",
   "my-prompts": "/my-prompts",
-  "my-runs": `/profile/${CURRENT_USER.username}`,
+  "my-runs": "/login",
 };
 
 function pathnameToNav(pathname: string): string {
@@ -24,8 +24,14 @@ function pathnameToNav(pathname: string): string {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { profile } = useAuth();
+
+  if (pathname === "/login" || pathname === "/signup") {
+    return <div className="h-full bg-bg-base">{children}</div>;
+  }
 
   const activeNav = pathnameToNav(pathname);
+  const profilePath = profile ? `/profile/${profile.username}` : "/login";
 
   return (
     <div className="flex h-full bg-bg-base overflow-hidden">
@@ -33,7 +39,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar
         className="hidden lg:flex"
         activeNav={activeNav}
-        onNavChange={(nav) => router.push(NAV_ROUTES[nav] ?? "/")}
+        onNavChange={(nav) =>
+          router.push(
+            nav === "my-runs" ? profilePath : (NAV_ROUTES[nav] ?? "/"),
+          )
+        }
         onTagChange={(tag) => {
           if (tag) router.push(`/search?tag=${encodeURIComponent(tag)}`);
         }}
@@ -44,7 +54,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <TopBar
           onSearch={(q) => router.push(`/search?q=${encodeURIComponent(q)}`)}
           onNewPrompt={() => router.push("/create")}
-          onProfile={() => router.push(`/profile/${CURRENT_USER.username}`)}
+          onProfile={() => router.push(profilePath)}
         />
 
         {/* Page content */}
@@ -53,10 +63,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Bottom navigation — mobile only */}
         <BottomNav
           activeNav={activeNav}
-          onNavChange={(nav) => router.push(NAV_ROUTES[nav] ?? "/")}
+          onNavChange={(nav) =>
+            router.push(
+              nav === "my-runs" ? profilePath : (NAV_ROUTES[nav] ?? "/"),
+            )
+          }
           onSearch={() => router.push("/search")}
           onCreate={() => router.push("/create")}
-          onProfile={() => router.push(`/profile/${CURRENT_USER.username}`)}
+          onProfile={() => router.push(profilePath)}
         />
       </div>
     </div>

@@ -2,8 +2,9 @@
 import { useState } from "react";
 import { Search, Bell, Plus, Sun, Moon } from "lucide-react";
 import Avatar from "./Avatar";
-import { CURRENT_USER } from "@/data/mock";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/hooks/useAuth";
+import { getAvatarColor, getInitials } from "@/lib/utils";
 
 interface TopBarProps {
   onSearch?: (q: string) => void;
@@ -18,6 +19,7 @@ export default function TopBar({
 }: TopBarProps) {
   const [query, setQuery] = useState("");
   const { theme, toggleTheme } = useTheme();
+  const { isAuthenticated, isLoading, profile } = useAuth();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,10 +99,26 @@ export default function TopBar({
         {/* Avatar — desktop only */}
         <button
           onClick={onProfile}
-          aria-label="Your profile"
-          className="hidden lg:flex rounded-full hover:ring-2 hover:ring-accent/40 transition-all"
+          aria-label={isAuthenticated ? "Your profile" : "Sign in"}
+          className="hidden lg:flex rounded-full hover:ring-2 hover:ring-accent/40 transition-all items-center"
         >
-          <Avatar author={CURRENT_USER} size="md" />
+          {profile ? (
+            <Avatar
+              author={{
+                id: profile.id,
+                name: profile.display_name,
+                username: profile.username,
+                initials: getInitials(profile.display_name, profile.username),
+                avatarColor: getAvatarColor(profile.id),
+                avatarUrl: profile.avatar_url,
+              }}
+              size="md"
+            />
+          ) : (
+            <span className="rounded-full border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary">
+              {isLoading ? "Loading" : "Sign In"}
+            </span>
+          )}
         </button>
       </div>
     </header>

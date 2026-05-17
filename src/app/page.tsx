@@ -1,49 +1,45 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import PromptFeed from "@/components/PromptFeed";
 import PromptDetail from "@/components/PromptDetail";
-import { PROMPTS } from "@/data/mock";
-import { Prompt } from "@/types";
-import { usePromptStore } from "@/context/PromptStore";
 import { clsx } from "clsx";
+import { usePrompt, usePrompts } from "@/hooks/usePrompts";
 
 type FilterTab = "trending" | "latest" | "top-rated";
 
 export default function HomePage() {
-  const { promptStates, handleUpvote, handleBookmark, handleRun } =
-    usePromptStore();
-
   const [filterTab, setFilterTab] = useState<FilterTab>("trending");
-  const [selectedId, setSelectedId] = useState<string>(PROMPTS[0].id);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
+  const {
+    prompts,
+    promptStates,
+    loading,
+    error,
+    hasMore,
+    loadMore,
+    setPromptVote,
+    togglePromptBookmark,
+  } = usePrompts({ sortBy: filterTab });
 
   function handleCardSelect(id: string) {
     setSelectedId(id);
     setMobileShowDetail(true);
   }
 
-  const selectedPrompt = useMemo(
-    () => PROMPTS.find((p) => p.id === selectedId) ?? PROMPTS[0],
-    [selectedId],
-  );
+  const resolvedSelectedId =
+    selectedId && prompts.some((prompt) => prompt.id === selectedId)
+      ? selectedId
+      : (prompts[0]?.id ?? null);
+  const selectedPromptDetail = usePrompt(resolvedSelectedId);
 
-  const filteredPrompts = useMemo(() => {
-    let list: Prompt[] = [...PROMPTS];
-
-    if (filterTab === "trending") {
-      list.sort(
-        (a, b) =>
-          (b.isTrending ? 1 : 0) - (a.isTrending ? 1 : 0) ||
-          (promptStates[b.id]?.upvotes ?? b.upvotes) -
-            (promptStates[a.id]?.upvotes ?? a.upvotes),
-      );
-    } else if (filterTab === "top-rated") {
-      list.sort((a, b) => b.rating - a.rating || b.ratingCount - a.ratingCount);
-    }
-
-    return list;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterTab, promptStates]);
+  const selectedPrompt = useMemo(() => {
+    return (
+      selectedPromptDetail.prompt ??
+      prompts.find((prompt) => prompt.id === resolvedSelectedId) ??
+      null
+    );
+  }, [prompts, resolvedSelectedId, selectedPromptDetail.prompt]);
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -58,17 +54,22 @@ export default function HomePage() {
         )}
       >
         <PromptFeed
-          prompts={filteredPrompts}
+          prompts={prompts}
           promptStates={promptStates}
-          selectedId={selectedId}
+          selectedId={resolvedSelectedId}
           onSelect={handleCardSelect}
-          onUpvote={handleUpvote}
-          onBookmark={handleBookmark}
+          onUpvote={(id) => void setPromptVote(id, 1)}
+          onDownvote={(id) => void setPromptVote(id, -1)}
+          onBookmark={(id) => void togglePromptBookmark(id)}
           filterTab={filterTab}
           onFilterChange={(tab) => setFilterTab(tab as FilterTab)}
           activeTag={null}
           title="Explore Prompts"
           subtitle="Discover and run the best prompts, shared by the community."
+          loading={loading}
+          error={error}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
         />
       </div>
 
@@ -81,15 +82,28 @@ export default function HomePage() {
           mobileShowDetail ? "flex" : "hidden lg:flex",
         )}
       >
-        <PromptDetail
-          key={selectedId}
-          prompt={selectedPrompt}
-          state={promptStates[selectedId]}
-          onUpvote={() => handleUpvote(selectedId)}
-          onBookmark={() => handleBookmark(selectedId)}
-          onRun={() => handleRun(selectedId)}
-          onBack={() => setMobileShowDetail(false)}
-        />
+        {selectedPrompt && resolvedSelectedId && selectedPromptDetail.state ? (
+          <PromptDetail
+            key={resolvedSelectedId}
+            prompt={selectedPrompt}
+            state={selectedPromptDetail.state}
+            onUpvote={() => void selectedPromptDetail.setPromptVote(1)}
+            onBookmark={() => void selectedPromptDetail.togglePromptBookmark()}
+            onRun={() => void selectedPromptDetail.runPrompt()}
+            onBack={() => setMobileShowDetail(false)}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center px-6 text-center">
+            <div>
+              <p className="text-base font-semibold text-text-primary mb-2">
+                No prompt selected
+              </p>
+              <p className="text-sm text-text-muted">
+                Choose a prompt from the feed to see the full details.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

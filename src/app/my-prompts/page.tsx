@@ -1,15 +1,23 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { FileText, Play, ThumbsUp, Plus } from "lucide-react";
-import { CURRENT_USER } from "@/data/mock";
-import { usePromptStore } from "@/context/PromptStore";
 import TagBadge from "@/components/TagBadge";
+import { useAuth } from "@/hooks/useAuth";
+import { usePrompts } from "@/hooks/usePrompts";
 
 export default function MyPromptsPage() {
   const router = useRouter();
-  const { prompts, promptStates } = usePromptStore();
-
-  const myPrompts = prompts.filter((p) => p.author.id === CURRENT_USER.id);
+  const { profile } = useAuth();
+  const {
+    prompts: myPrompts,
+    promptStates,
+    loading,
+    error,
+  } = usePrompts({
+    username: profile?.username,
+    sortBy: "latest",
+    enabled: Boolean(profile?.username),
+  });
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -32,7 +40,13 @@ export default function MyPromptsPage() {
           </button>
         </div>
 
-        {myPrompts.length === 0 ? (
+        {loading ? (
+          <div className="py-20 text-center text-sm text-text-secondary">
+            Loading your prompts…
+          </div>
+        ) : error ? (
+          <div className="py-20 text-center text-sm text-red-300">{error}</div>
+        ) : myPrompts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-14 h-14 rounded-2xl bg-bg-elevated border border-border-default flex items-center justify-center mb-5">
               <FileText size={22} className="text-text-muted" />

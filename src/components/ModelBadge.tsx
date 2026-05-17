@@ -22,9 +22,11 @@ const MODEL_STYLES_LIGHT: Record<Model, string> = {
   "Mistral Large": "bg-purple-50 text-purple-700 border border-purple-200",
 };
 
-export default function ModelBadge({ model }: { model: Model }) {
+export default function ModelBadge({ model }: { model: Model | string }) {
   const { theme } = useTheme();
-  const map = theme === "light" ? MODEL_STYLES_LIGHT : MODEL_STYLES_DARK;
+  const map = (
+    theme === "light" ? MODEL_STYLES_LIGHT : MODEL_STYLES_DARK
+  ) as Record<string, string>;
   const fallback =
     theme === "light"
       ? "bg-zinc-100 text-zinc-600 border border-zinc-300"

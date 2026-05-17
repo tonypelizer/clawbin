@@ -1,14 +1,18 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { Bookmark, Play, ThumbsUp } from "lucide-react";
-import { usePromptStore } from "@/context/PromptStore";
 import TagBadge from "@/components/TagBadge";
+import { usePrompts } from "@/hooks/usePrompts";
 
 export default function BookmarksPage() {
   const router = useRouter();
-  const { prompts, promptStates, handleBookmark } = usePromptStore();
-
-  const bookmarked = prompts.filter((p) => promptStates[p.id]?.bookmarked);
+  const {
+    prompts: bookmarked,
+    promptStates,
+    loading,
+    error,
+    togglePromptBookmark,
+  } = usePrompts({ bookmarkedOnly: true, sortBy: "latest" });
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -22,7 +26,13 @@ export default function BookmarksPage() {
           </p>
         </div>
 
-        {bookmarked.length === 0 ? (
+        {loading ? (
+          <div className="py-20 text-center text-sm text-text-secondary">
+            Loading your bookmarks…
+          </div>
+        ) : error ? (
+          <div className="py-20 text-center text-sm text-red-300">{error}</div>
+        ) : bookmarked.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-14 h-14 rounded-2xl bg-bg-elevated border border-border-default flex items-center justify-center mb-5">
               <Bookmark size={22} className="text-text-muted" />
@@ -62,7 +72,7 @@ export default function BookmarksPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleBookmark(prompt.id);
+                        void togglePromptBookmark(prompt.id);
                       }}
                       aria-label="Remove bookmark"
                       className="flex-shrink-0 p-1.5 rounded-lg text-accent-light hover:bg-accent/10 transition-colors"

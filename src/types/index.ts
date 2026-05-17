@@ -35,13 +35,14 @@ export interface Author {
   avatarColor: string;
   initials: string;
   username: string;
+  avatarUrl?: string | null;
 }
 
 export interface PromptRun {
   id: string;
   promptId: string;
   runBy: Author;
-  model: Model;
+  model: Model | string;
   input: string;
   output: string;
   runAt: string; // relative date string
@@ -64,6 +65,7 @@ export interface Prompt {
   isTrending?: boolean;
   isBookmarked?: boolean;
   runs: PromptRun[];
+  commentCount?: number;
 }
 
 // Per-prompt mutable UI state (upvote, bookmark, etc.)
@@ -73,4 +75,5 @@ export interface PromptState {
   bookmarked: boolean;
   runs: PromptRun[];
   runsCount: number;
+  voteValue: -1 | 0 | 1;
 }

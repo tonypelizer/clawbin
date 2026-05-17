@@ -1,5 +1,4 @@
 "use client";
-import { useState } from "react";
 import {
   ChevronUp,
   ChevronDown,
@@ -37,23 +36,14 @@ export default function PromptCard({
   onDownvote,
   onBookmark,
 }: PromptCardProps) {
-  // downvoted is purely local visual state — it only affects the delta
-  // calculation at the point of click; actual upvote count lives in page state
-  const [downvoted, setDownvoted] = useState(false);
-
-  // Re-export useState for local downvote
   function handleUpvote(e: React.MouseEvent) {
     e.stopPropagation();
-    if (downvoted) setDownvoted(false);
     onUpvote();
   }
 
   function handleDownvote(e: React.MouseEvent) {
     e.stopPropagation();
-    const nowDownvoted = !downvoted;
-    setDownvoted(nowDownvoted);
-    // If user was upvoted from page state, undo it first
-    if (state.upvoted) onUpvote(); // toggles upvote off
+    onDownvote();
   }
 
   function handleBookmark(e: React.MouseEvent) {
@@ -63,7 +53,7 @@ export default function PromptCard({
 
   const voteColor = state.upvoted
     ? "text-accent-light"
-    : downvoted
+    : state.voteValue === -1
       ? "text-red-400"
       : isSelected
         ? "text-text-secondary"
@@ -111,12 +101,15 @@ export default function PromptCard({
           aria-label="Downvote"
           className={clsx(
             "min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md transition-all hover:bg-bg-hover active:scale-90",
-            downvoted
+            state.voteValue === -1
               ? "text-red-400"
               : "text-text-muted hover:text-text-secondary",
           )}
         >
-          <ChevronDown size={16} strokeWidth={downvoted ? 2.5 : 2} />
+          <ChevronDown
+            size={16}
+            strokeWidth={state.voteValue === -1 ? 2.5 : 2}
+          />
         </button>
       </div>
 

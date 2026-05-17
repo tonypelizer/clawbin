@@ -2,8 +2,10 @@
 import { Compass, FileText, Play, Bookmark, Settings } from "lucide-react";
 import Link from "next/link";
 import Avatar from "./Avatar";
-import { CURRENT_USER, TOP_TAGS } from "@/data/mock";
 import { clsx } from "clsx";
+import { useAuth } from "@/hooks/useAuth";
+import { useTagStats } from "@/hooks/useTagStats";
+import { getAvatarColor, getInitials } from "@/lib/utils";
 
 // Sidebar is desktop-only; the parent passes className="hidden lg:flex" on mobile
 
@@ -59,6 +61,9 @@ export default function Sidebar({
   onTagChange,
   className,
 }: SidebarProps) {
+  const tags = useTagStats();
+  const { profile } = useAuth();
+
   return (
     <aside
       className={clsx(
@@ -126,7 +131,7 @@ export default function Sidebar({
           Top Tags
         </p>
         <div className="flex flex-col gap-0.5">
-          {TOP_TAGS.map((t) => (
+          {tags.map((t) => (
             <button
               key={t.label}
               onClick={() =>
@@ -162,24 +167,43 @@ export default function Sidebar({
         </div>
 
         {/* User row */}
-        <Link
-          href={`/profile/${CURRENT_USER.username}`}
-          className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-bg-hover transition-colors group"
-        >
-          <Avatar author={CURRENT_USER} size="sm" />
-          <div className="flex-1 min-w-0 text-left">
-            <p className="text-xs font-medium text-text-primary truncate leading-tight">
-              {CURRENT_USER.name}
-            </p>
-            <p className="text-[11px] text-text-secondary truncate leading-tight">
-              @{CURRENT_USER.username}
-            </p>
-          </div>
-          <Settings
-            size={13}
-            className="text-text-muted group-hover:text-text-secondary transition-colors flex-shrink-0"
-          />
-        </Link>
+        {profile ? (
+          <Link
+            href={`/profile/${profile.username}`}
+            className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-bg-hover transition-colors group"
+          >
+            <Avatar
+              author={{
+                id: profile.id,
+                name: profile.display_name,
+                username: profile.username,
+                initials: getInitials(profile.display_name, profile.username),
+                avatarColor: getAvatarColor(profile.id),
+                avatarUrl: profile.avatar_url,
+              }}
+              size="sm"
+            />
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-xs font-medium text-text-primary truncate leading-tight">
+                {profile.display_name}
+              </p>
+              <p className="text-[11px] text-text-secondary truncate leading-tight">
+                @{profile.username}
+              </p>
+            </div>
+            <Settings
+              size={13}
+              className="text-text-muted group-hover:text-text-secondary transition-colors flex-shrink-0"
+            />
+          </Link>
+        ) : (
+          <Link
+            href="/login"
+            className="w-full flex items-center justify-center rounded-lg border border-border-default px-3 py-2 text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
+          >
+            Sign in to save prompts
+          </Link>
+        )}
       </div>
     </aside>
   );

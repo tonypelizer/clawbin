@@ -1,7 +1,7 @@
 "use client";
-import { useState, use } from "react";
-import { notFound } from "next/navigation";
-import { useRouter } from "next/navigation";
+
+import { use, useEffect, useState } from "react";
+import { notFound, useRouter } from "next/navigation";
 import {
   FileText,
   Play,
@@ -11,11 +11,19 @@ import {
   Edit3,
   Bookmark,
 } from "lucide-react";
-import { AUTHORS, CURRENT_USER } from "@/data/mock";
-import { usePromptStore } from "@/context/PromptStore";
 import Avatar from "@/components/Avatar";
-import TagBadge from "@/components/TagBadge";
 import ModelBadge from "@/components/ModelBadge";
+import TagBadge from "@/components/TagBadge";
+import { useAuth } from "@/hooks/useAuth";
+import { usePrompts } from "@/hooks/usePrompts";
+import {
+  fetchProfileByUsername,
+  fetchPrompts,
+  fetchUserRuns,
+} from "@/lib/services/prompt-service";
+import { mapProfileToAuthor, mapPromptRunRow } from "@/lib/utils";
+import { Prompt, PromptRun } from "@/types";
+import { ProfileRow } from "@/types/supabase";
 import { clsx } from "clsx";
 
 type ProfileTab = "prompts" | "runs" | "bookmarks";
@@ -27,37 +35,142 @@ interface Props {
 export default function ProfilePage({ params }: Props) {
   const { username } = use(params);
   const router = useRouter();
-  const { prompts, promptStates, handleBookmark } = usePromptStore();
+  const { profile: currentProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>("prompts");
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [runs, setRuns] = useState<
+    Array<PromptRun & { prompt: Pick<Prompt, "id" | "title"> | null }>
+  >([]);
 
-  const author = AUTHORS.find((a) => a.username === username);
-  if (!author) return notFound();
+  const {
+    prompts: userPrompts,
+    promptStates,
+    togglePromptBookmark,
+  } = usePrompts({
+    username,
+    sortBy: "latest",
+  });
+  const { prompts: bookmarkedPrompts } = usePrompts({
+    bookmarkedOnly: true,
+    sortBy: "latest",
+    enabled: currentProfile?.username === username && activeTab === "bookmarks",
+  });
 
-  const isCurrentUser = author.id === CURRENT_USER.id;
-  const userPrompts = prompts.filter((p) => p.author.id === author.id);
-  const bookmarkedPrompts = prompts.filter(
-    (p) => promptStates[p.id]?.bookmarked,
-  );
-  const allRuns = prompts
-    .flatMap((p) =>
-      (promptStates[p.id]?.runs ?? []).map((r) => ({ ...r, prompt: p })),
-    )
-    .filter((r) => r.runBy.id === author.id)
-    .slice(0, 20);
+  useEffect(() => {
+    let active = true;
 
+    async function loadProfile() {
+      setProfileLoading(true);
+
+      try {
+        const nextProfile = await fetchProfileByUsername(username);
+        if (!active) return;
+        setProfile(nextProfile);
+      } catch {
+        if (!active) return;
+        setProfile(null);
+      } finally {
+        if (active) setProfileLoading(false);
+      }
+    }
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [username]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadRuns() {
+      if (
+        !currentProfile ||
+        currentProfile.username !== username ||
+        activeTab !== "runs"
+      ) {
+        setRuns([]);
+        return;
+      }
+
+      const runRows = await fetchUserRuns(currentProfile.id);
+      const promptIds = Array.from(
+        new Set(runRows.map((run) => run.prompt_id)),
+      );
+      const promptRows =
+        promptIds.length > 0
+          ? await fetchPrompts({
+              promptIds,
+              page: 0,
+              pageSize: promptIds.length,
+            })
+          : [];
+
+      if (!active) return;
+
+      const promptMap = new Map(
+        promptRows.map((prompt) => [
+          prompt.id,
+          { id: prompt.id, title: prompt.title },
+        ]),
+      );
+
+      const author = mapProfileToAuthor({
+        id: currentProfile.id,
+        username: currentProfile.username,
+        display_name: currentProfile.display_name,
+        avatar_url: currentProfile.avatar_url,
+      });
+
+      setRuns(
+        runRows.map((run) => ({
+          ...mapPromptRunRow(run, author),
+          prompt: promptMap.get(run.prompt_id) ?? null,
+        })),
+      );
+    }
+
+    void loadRuns();
+
+    return () => {
+      active = false;
+    };
+  }, [activeTab, currentProfile, username]);
+
+  if (!profileLoading && !profile) {
+    notFound();
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-text-secondary">
+        Loading profile…
+      </div>
+    );
+  }
+
+  const author = mapProfileToAuthor({
+    id: profile.id,
+    username: profile.username,
+    display_name: profile.display_name,
+    avatar_url: profile.avatar_url,
+  });
+  const isCurrentUser = currentProfile?.id === profile.id;
   const totalUpvotes = userPrompts.reduce(
-    (sum, p) => sum + (promptStates[p.id]?.upvotes ?? p.upvotes),
+    (sum, prompt) => sum + (promptStates[prompt.id]?.upvotes ?? prompt.upvotes),
     0,
   );
   const totalRuns = userPrompts.reduce(
-    (sum, p) => sum + (promptStates[p.id]?.runsCount ?? p.runsCount),
+    (sum, prompt) =>
+      sum + (promptStates[prompt.id]?.runsCount ?? prompt.runsCount),
     0,
   );
-
   const displayList =
     activeTab === "prompts"
       ? userPrompts
-      : activeTab === "bookmarks"
+      : activeTab === "bookmarks" && isCurrentUser
         ? bookmarkedPrompts
         : [];
 
@@ -78,7 +191,6 @@ export default function ProfilePage({ params }: Props) {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="max-w-2xl mx-auto w-full px-4 py-8">
-        {/* Profile header */}
         <div className="flex items-start gap-4 mb-8">
           <Avatar author={author} size="lg" />
           <div className="flex-1 min-w-0">
@@ -92,28 +204,33 @@ export default function ProfilePage({ params }: Props) {
                 </span>
               )}
             </div>
-            <p className="text-sm text-text-muted mb-3">@{author.username}</p>
+            <p className="text-sm text-text-muted mb-2">@{author.username}</p>
+            {profile.bio && (
+              <p className="text-sm text-text-secondary mb-3 leading-relaxed">
+                {profile.bio}
+              </p>
+            )}
             {isCurrentUser && (
-              <button
-                onClick={() => router.push("/create")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-elevated border border-border-default text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-strong transition-all"
-              >
-                <Edit3 size={12} />
-                New Prompt
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => router.push("/create")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-elevated border border-border-default text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-strong transition-all"
+                >
+                  <Edit3 size={12} />
+                  New Prompt
+                </button>
+                <button
+                  onClick={() => router.push("/profile/edit")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-elevated border border-border-default text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-strong transition-all"
+                >
+                  <Settings size={12} />
+                  Edit Profile
+                </button>
+              </div>
             )}
           </div>
-          {isCurrentUser && (
-            <button
-              aria-label="Settings"
-              className="w-9 h-9 flex items-center justify-center rounded-lg bg-bg-elevated border border-border-subtle text-text-muted hover:text-text-primary hover:border-border-default transition-all"
-            >
-              <Settings size={15} />
-            </button>
-          )}
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-8">
           <StatCard
             icon={<FileText size={13} />}
@@ -123,20 +240,19 @@ export default function ProfilePage({ params }: Props) {
           <StatCard
             icon={<ThumbsUp size={13} />}
             value={totalUpvotes}
-            label="Upvotes"
+            label="Votes"
           />
           <StatCard
             icon={<Play size={13} />}
             value={
               totalRuns >= 1000
-                ? (totalRuns / 1000).toFixed(1) + "k"
+                ? `${(totalRuns / 1000).toFixed(1)}k`
                 : totalRuns
             }
             label="Runs"
           />
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-1 bg-bg-elevated border border-border-subtle rounded-xl p-1 mb-6">
           {tabs.map((tab) => (
             <button
@@ -161,25 +277,31 @@ export default function ProfilePage({ params }: Props) {
           ))}
         </div>
 
-        {/* Tab content */}
         {activeTab === "runs" ? (
           <div className="flex flex-col gap-3">
-            {allRuns.length === 0 ? (
-              <EmptyTabState icon={<Play size={20} />} message="No runs yet." />
+            {runs.length === 0 ? (
+              <EmptyTabState
+                icon={<Play size={20} />}
+                message={
+                  isCurrentUser ? "No runs yet." : "Run history is private."
+                }
+              />
             ) : (
-              allRuns.map((r, i) => (
+              runs.map((run) => (
                 <div
-                  key={r.id + i}
-                  onClick={() => router.push("/prompt/" + r.prompt.id)}
+                  key={run.id}
+                  onClick={() =>
+                    run.prompt && router.push(`/prompt/${run.prompt.id}`)
+                  }
                   className="rounded-xl border border-border-subtle bg-bg-elevated p-4 cursor-pointer hover:border-border-default transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3 mb-2">
                     <p className="text-sm font-medium text-text-primary truncate">
-                      {r.prompt.title}
+                      {run.prompt?.title ?? "Prompt unavailable"}
                     </p>
-                    <ModelBadge model={r.model} />
+                    <ModelBadge model={run.model} />
                   </div>
-                  <p className="text-xs text-text-muted">{r.runAt}</p>
+                  <p className="text-xs text-text-muted">{run.runAt}</p>
                 </div>
               ))
             )}
@@ -216,18 +338,18 @@ export default function ProfilePage({ params }: Props) {
               return (
                 <div
                   key={prompt.id}
-                  onClick={() => router.push("/prompt/" + prompt.id)}
+                  onClick={() => router.push(`/prompt/${prompt.id}`)}
                   className="rounded-xl border border-border-subtle bg-bg-elevated p-4 cursor-pointer hover:border-border-default transition-all"
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <h3 className="text-sm font-semibold text-text-primary leading-snug">
                       {prompt.title}
                     </h3>
-                    {activeTab === "bookmarks" && (
+                    {activeTab === "bookmarks" && isCurrentUser && (
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleBookmark(prompt.id);
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void togglePromptBookmark(prompt.id);
                         }}
                         aria-label="Remove bookmark"
                         className="flex-shrink-0 p-1.5 rounded-lg text-accent-light hover:bg-accent/10 transition-colors"

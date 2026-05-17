@@ -2,27 +2,26 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, X, Check, Sparkles } from "lucide-react";
-import { TOP_TAGS } from "@/data/mock";
 import { clsx } from "clsx";
+import { DEFAULT_MODEL_OPTIONS } from "@/lib/constants";
+import { useTagStats } from "@/hooks/useTagStats";
+import { useAuth } from "@/hooks/useAuth";
+import { insertPrompt } from "@/lib/services/prompt-service";
 
-const MODEL_OPTIONS = [
-  "GPT-4o",
-  "GPT-4o Mini",
-  "Claude 3.5",
-  "Claude 3 Opus",
-  "Gemini 1.5 Pro",
-  "Mistral Large",
-];
+const MODEL_OPTIONS = DEFAULT_MODEL_OPTIONS;
 
 interface FormErrors {
   title?: string;
   body?: string;
   tags?: string;
+  submit?: string;
 }
 
 export default function CreatePromptPage() {
   const router = useRouter();
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const tags = useTagStats();
+  const { user } = useAuth();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -62,12 +61,37 @@ export default function CreatePromptPage() {
     return Object.keys(newErrors).length === 0;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
+    if (!user) {
+      router.push("/login?next=%2Fcreate");
+      return;
+    }
+
     setSubmitted(true);
-    // Mock submission — in a real app this would call an API
-    setTimeout(() => router.push("/"), 1200);
+    setErrors({});
+
+    try {
+      const promptId = await insertPrompt({
+        userId: user.id,
+        title: title.trim(),
+        content: body.trim(),
+        description: description.trim(),
+        tags: selectedTags,
+        isPublic,
+      });
+
+      router.push(`/prompt/${promptId}`);
+    } catch (submitError) {
+      setSubmitted(false);
+      setErrors({
+        submit:
+          submitError instanceof Error
+            ? submitError.message
+            : "Unable to publish prompt.",
+      });
+    }
   }
 
   const charCount = body.length;
@@ -231,7 +255,7 @@ export default function CreatePromptPage() {
               </span>
             </label>
             <div className="flex flex-wrap gap-2">
-              {TOP_TAGS.map((t) => {
+              {tags.map((t) => {
                 const active = selectedTags.includes(t.label);
                 return (
                   <button
@@ -257,6 +281,9 @@ export default function CreatePromptPage() {
             </div>
             {errors.tags && (
               <p className="text-xs text-red-400 mt-2">{errors.tags}</p>
+            )}
+            {errors.submit && (
+              <p className="text-xs text-red-400 mt-2">{errors.submit}</p>
             )}
             {selectedTags.length > 0 && (
               <div className="flex items-center gap-2 mt-3 flex-wrap">
